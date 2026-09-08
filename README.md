@@ -21,5 +21,3 @@ python -m unittest discover -s tests -v
 ```
 
 建议先读教程的前八章建立架构视角，再运行代码，最后按 TraceForge 设计文档的十周路线逐步扩展。
-
-
