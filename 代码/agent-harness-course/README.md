@@ -9,10 +9,10 @@
 - `JsonlEventStore`：按顺序追加运行事件；
 - `ToolRegistry` 与 `ToolRuntime`：把工具实现和执行治理分开；
 - `DenyPathPolicy`：在执行前拒绝敏感路径；
-- `EffectJournal`：缓存完成结果，避免重复副作用；
+- `EffectJournal`：在同一进程内缓存完成结果；当前未持久化，不能保证崩溃后的副作用去重；
 - `ContextBuilder`：按来源、优先级和预算构造上下文；
 - `project_run`：从事件重建只读运行摘要；
-- 21 个自动化测试：覆盖成功、拒绝、失败、幂等和恢复语义。
+- 21 个自动化测试：覆盖成功、拒绝、失败、进程内重复调用和 JSONL 重启后序号延续；不覆盖跨进程副作用恢复。
 
 ## 目录
 

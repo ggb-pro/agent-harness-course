@@ -5,14 +5,15 @@
 ## 学习
 
 - [`Harness工程教学.md`](./学习/Harness工程教学.md)：导读 + 20 章工程教程，对比 Claude Code、DeepSeek Harness 与 nanobot，并给出六周学习路线。
-- [`TraceForge-Agent-Harness-项目设计文档.md`](./学习/TraceForge-Agent-Harness-项目设计文档.md)：v0.2 项目设计，覆盖事件溯源、权限策略、Effect Journal、上下文治理、恢复与评测。
+- [`TraceForge-Agent-Harness-项目设计文档.md`](./学习/TraceForge-Agent-Harness-项目设计文档.md)：基于原 v0.2 全文修订的 v0.3 设计，区分课程代码已实现能力与恢复、审批、沙箱、评测等目标能力。
+- [`Agent工程面经与答案.md`](./学习/Agent工程面经与答案.md)：48 道 Agent 工程面试题、参考答案及对本项目的逐题追问。
 
 ## 代码
 
 - [`agent-harness-course/`](./代码/agent-harness-course/)：可直接阅读和运行的 Python 标准库示例工程。
 - [`agent-harness-course.zip`](./代码/agent-harness-course.zip)：同一工程的下载包。
 
-配套工程不调用真实模型，不需要 API Key。运行 21 项自动化测试即可验证主循环、事件记录、工具策略、幂等副作用和状态投影。
+配套工程不调用真实模型，不需要 API Key。运行 21 项自动化测试可验证主循环、事件记录、示例路径拒绝策略、**进程内** Effect 结果复用和状态投影；尚不能证明崩溃后的副作用去重或真实沙箱隔离。
 
 ```powershell
 cd 代码/agent-harness-course
