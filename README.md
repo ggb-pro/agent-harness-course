@@ -1,24 +1,23 @@
-# Agent Harness 学习与实战
+# Agent Harness：学习、代码与面经
 
-本仓库把 Agent Harness 的学习材料与可运行代码整理为两部分，适合系统学习、源码阅读和作品集实践。
+本仓库按三个方向维护。学习材料用于建立概念和拆解源码；代码用于验证设计是否真的成立；面经把架构问题转化为可回答、可追问的工程证据。**仓库最新提交是文档的基准**，更新前先拉取 GitHub，更新后验证并推送。
 
-## 学习
+| 方向 | 入口 | 内容与维护重点 |
+| --- | --- | --- |
+| 学习文档 | [从零理解 Agent Harness](./学习文档/从零理解Agent-Harness.md) | 按一条 RepoFix 任务逐层讲解 Loop、状态、工具、安全、恢复、上下文、评测，并以 Claude Code、DeepSeek Harness、nanobot 对照；新读者从这里开始。 |
+| 学习文档 | [Harness 工程教学](./学习文档/Harness工程教学.md) · [TraceForge 项目设计](./学习文档/TraceForge-Agent-Harness-项目设计文档.md) | 前者是源码阅读与专题教程；后者区分课程代码的已实现能力和目标设计。 |
+| 代码 | [Python 标准库课程工程](./代码/agent-harness-course/) | FakeProvider、AgentRunner、事件、工具策略、进程内 Effect 缓存及 21 项测试；代码变化须同步更新测试和相关文档。 |
+| 面经 | [Agent 工程面经与答案](./面经/Agent工程面经与答案.md) | 48 道题的分层答案、失败边界、验证指标和 TraceForge 项目追问；来源与答案随公开实现更新。 |
 
-- [`Harness工程教学.md`](./学习/Harness工程教学.md)：导读 + 20 章工程教程，对比 Claude Code、DeepSeek Harness 与 nanobot，并给出六周学习路线。
-- [`TraceForge-Agent-Harness-项目设计文档.md`](./学习/TraceForge-Agent-Harness-项目设计文档.md)：基于原 v0.2 全文修订的 v0.3 设计，区分课程代码已实现能力与恢复、审批、沙箱、评测等目标能力。
-- [`Agent工程面经与答案.md`](./学习/Agent工程面经与答案.md)：48 道 Agent 工程面试题、参考答案及对本项目的逐题追问。
+仓库根目录只保留入口、维护约定和许可证。旧的课程工程 ZIP 与源码重复且已过期，因此不再入库；需要离线包时可从 GitHub 下载当前提交的源码。目录维护约定见 [AGENTS.md](./AGENTS.md)。
 
-## 代码
+## 快速验证
 
-- [`agent-harness-course/`](./代码/agent-harness-course/)：可直接阅读和运行的 Python 标准库示例工程。
-- [`agent-harness-course.zip`](./代码/agent-harness-course.zip)：同一工程的下载包。
-
-配套工程不调用真实模型，不需要 API Key。运行 21 项自动化测试可验证主循环、事件记录、示例路径拒绝策略、**进程内** Effect 结果复用和状态投影；尚不能证明崩溃后的副作用去重或真实沙箱隔离。
+在 `代码/agent-harness-course` 目录运行：
 
 ```powershell
-cd 代码/agent-harness-course
 $env:PYTHONPATH = "src"
 python -m unittest discover -s tests -v
 ```
 
-建议先读教程的前八章建立架构视角，再运行代码，最后按 TraceForge 设计文档的十周路线逐步扩展。
+课程工程不需要 API Key。现有测试证明主循环、事件记录、示例路径拒绝策略、**同进程** Effect 结果复用和状态投影；不证明跨进程副作用去重、真实沙箱或 RepoFix 修复成功率。
