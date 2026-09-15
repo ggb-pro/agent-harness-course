@@ -39,4 +39,14 @@ def project_run(events: list[Event]) -> RunProjection:
         elif event.type == "run.failed":
             projection.status = "failed"
             projection.errors.append(str(event.payload.get("error", "unknown error")))
+        elif event.type == "run.unverified":
+            projection.status = "unverified"
+            projection.answer = str(event.payload.get("answer", ""))
+            projection.errors.append(str(event.payload.get("reason", "not verified")))
+        elif event.type == "run.cancelled":
+            projection.status = "cancelled"
+            projection.errors.append(str(event.payload.get("reason", "cancelled")))
+        elif event.type == "run.budget_exhausted":
+            projection.status = "budget_exhausted"
+            projection.errors.append(str(event.payload.get("reason", "budget exhausted")))
     return projection

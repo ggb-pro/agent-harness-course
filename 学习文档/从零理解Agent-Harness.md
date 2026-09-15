@@ -98,7 +98,7 @@ RepoFix 的 Verifier 应检查允许路径、diff 是否与用户目标相关、
 
 ## 第十讲：从课程原型走到作品集项目
 
-建议按证据逐级推进，而非一口气实现完整平台。阶段 A：运行现有 21 项测试，读懂 FakeProvider、Runner、Event Store 和 ToolRuntime；为“模型自称成功但测试失败”写一个失败样本。阶段 B：接入 RunState、预算、Context 与 Verifier；每个迁移都有事件和测试。阶段 C：持久化 Effect 意图、故障注入和对账；证明重启后不盲重试。阶段 D：在隔离 worktree 与真正的沙箱中实现 RepoFix，并建立固定任务集与简单基线。阶段 E：只有单 Agent 数据显示收益时才引入 Explore Subagent、MCP 或远程执行。里程碑与门禁见[统一文档](../面经/TraceForge-问题驱动设计与面试答案.md)。
+建议按证据逐级推进，而非一口气实现完整平台。阶段 A：运行现有 29 项测试，读懂 FakeProvider、Runner、Event Store 和 ToolRuntime；其中“模型自称成功但无验收契约”已新增 `unverified` 回归样本。阶段 B：已有可重建 RunState、SQLite 事件 revision、模型/工具次数与截止时间上限、显式 CompletionContract 和精确重复观察检测；仍需接入 Context、token/费用预算、更稳健的进展检测及 RepoFix Verifier。阶段 C：持久化 Effect 意图、故障注入和对账；证明重启后不盲重试。阶段 D：在隔离 worktree 与真正的沙箱中实现 RepoFix，并建立固定任务集与简单基线。阶段 E：只有单 Agent 数据显示收益时才引入 Explore Subagent、MCP 或远程执行。里程碑与门禁见[统一文档](../面经/TraceForge-问题驱动设计与面试答案.md)。
 
 毕业验收不是“README 写得完整”，而是别人能在固定版本上复现：同一任务输入、代码版本、测试命令、事件轨迹、实际补丁、失败样例和指标。当前仓库只实现了课程原型，尚未达到这些毕业条件。[统一文档](../面经/TraceForge-问题驱动设计与面试答案.md)中的每一道项目追问都应能指向代码或可重复实验。
 

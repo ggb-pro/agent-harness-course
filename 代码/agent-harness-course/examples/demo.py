@@ -7,6 +7,7 @@ from traceforge_harness import (
     AgentRunner,
     AssistantResponse,
     DenyPathPolicy,
+    ExactTextCompletion,
     FakeProvider,
     InMemoryEventStore,
     ToolCall,
@@ -25,7 +26,9 @@ provider = FakeProvider([
     AssistantResponse(text="20 + 22 = 42"),
 ])
 
-result = AgentRunner(provider, runtime, events).run("请计算 20 + 22", run_id="demo-run")
+result = AgentRunner(provider, runtime, events, completion=ExactTextCompletion("20 + 22 = 42")).run(
+    "请计算 20 + 22", run_id="demo-run"
+)
 projection = project_run(events.load(result.run_id))
 
 print(json.dumps(asdict(result), ensure_ascii=False, indent=2))
