@@ -76,5 +76,5 @@ PYTHONPATH=src python -m unittest discover -s tests -v
 
 这个实现有意保持小型和同步。下一步可以依次加入 SQLite Event Store、真实 Provider、审批挂起/恢复、工作区沙箱和固定 RepoFix 评测集。不要先加入多 Agent；先用评测证明单 Agent 的瓶颈在哪里。
 
-更完整的取舍与路线见[TraceForge 项目设计文档](../../学习文档/TraceForge-Agent-Harness-项目设计文档.md)。
+更完整的取舍与路线见[TraceForge 问题驱动设计与面试答案](../../面经/TraceForge-问题驱动设计与面试答案.md)。
 

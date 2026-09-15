@@ -1,6 +1,6 @@
 # 从零理解 Agent Harness：一条任务、三套实现、十个工程问题
 
-> 更新于 2026-09-15。适合已经会调用大模型 API、希望理解 Agent 工程内核的开发者。本文是**学习主线**：先用一条 RepoFix 任务讲清因果关系，再分别观察 Claude Code、DeepSeek Harness（下称 DSH）和 nanobot 如何处理相同问题。现有的 [Harness 工程教学](./Harness工程教学.md) 提供更细的专题与源码阅读，[TraceForge 项目设计](./TraceForge-Agent-Harness-项目设计文档.md) 是毕业项目规格；不要把设计目标当成课程代码已实现能力。
+> 更新于 2026-09-15。适合已经会调用大模型 API、希望理解 Agent 工程内核的开发者。本文是**学习主线**：先用一条 RepoFix 任务讲清因果关系，再分别观察 Claude Code、DeepSeek Harness（下称 DSH）和 nanobot 如何处理相同问题。现有的 [Harness 工程教学](./Harness工程教学.md) 提供更细的专题与源码阅读，[问题驱动的 TraceForge 设计与面试答案](../面经/TraceForge-问题驱动设计与面试答案.md) 是毕业项目规格；不要把设计目标当成课程代码已实现能力。
 
 ## 学习路线与最终能力
 
@@ -98,9 +98,9 @@ RepoFix 的 Verifier 应检查允许路径、diff 是否与用户目标相关、
 
 ## 第十讲：从课程原型走到作品集项目
 
-建议按证据逐级推进，而非一口气实现完整平台。阶段 A：运行现有 21 项测试，读懂 FakeProvider、Runner、Event Store 和 ToolRuntime；为“模型自称成功但测试失败”写一个失败样本。阶段 B：接入 RunState、预算、Context 与 Verifier；每个迁移都有事件和测试。阶段 C：持久化 Effect 意图、故障注入和对账；证明重启后不盲重试。阶段 D：在隔离 worktree 与沙箱中实现 RepoFix，并建立固定任务集与简单基线。阶段 E：只有单 Agent 数据显示收益时才引入 Explore Subagent、MCP 或远程执行。详细十周路线见[设计文档](./TraceForge-Agent-Harness-项目设计文档.md)。
+建议按证据逐级推进，而非一口气实现完整平台。阶段 A：运行现有 21 项测试，读懂 FakeProvider、Runner、Event Store 和 ToolRuntime；为“模型自称成功但测试失败”写一个失败样本。阶段 B：接入 RunState、预算、Context 与 Verifier；每个迁移都有事件和测试。阶段 C：持久化 Effect 意图、故障注入和对账；证明重启后不盲重试。阶段 D：在隔离 worktree 与真正的沙箱中实现 RepoFix，并建立固定任务集与简单基线。阶段 E：只有单 Agent 数据显示收益时才引入 Explore Subagent、MCP 或远程执行。里程碑与门禁见[统一文档](../面经/TraceForge-问题驱动设计与面试答案.md)。
 
-毕业验收不是“README 写得完整”，而是别人能在固定版本上复现：同一任务输入、代码版本、测试命令、事件轨迹、实际补丁、失败样例和指标。当前仓库只实现了课程原型，尚未达到这些毕业条件。[面经题库](../面经/Agent工程面经与答案.md)中的每一道项目追问都应能指向代码或可重复实验。
+毕业验收不是“README 写得完整”，而是别人能在固定版本上复现：同一任务输入、代码版本、测试命令、事件轨迹、实际补丁、失败样例和指标。当前仓库只实现了课程原型，尚未达到这些毕业条件。[统一文档](../面经/TraceForge-问题驱动设计与面试答案.md)中的每一道项目追问都应能指向代码或可重复实验。
 
 ## 自测：能说清这六句话吗
 

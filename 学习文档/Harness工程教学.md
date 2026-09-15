@@ -3,7 +3,7 @@
 > 版本：2026-09-08（整理版）  
 > 适合读者：已经做过大模型应用或使用过 Agent 框架，希望真正理解 Agent 核心链路、能独立设计 Harness 的工程师。  
 > 说明：Claude Code 的内部源码并未完整公开，因此本文对它做的是“公开产品契约级”分析；DeepSeek Harness 与 nanobot 则可以结合官方架构文档和源码分析。DeepSeek Harness 目前仍是 developer preview，接口可能发生破坏性变化。
-> 配套内容：[`TraceForge-Agent-Harness-项目设计文档.md`](./TraceForge-Agent-Harness-项目设计文档.md) 与 [`代码/agent-harness-course`](../代码/agent-harness-course/README.md)。
+> 配套内容：[`TraceForge-问题驱动设计与面试答案.md`](../面经/TraceForge-问题驱动设计与面试答案.md) 与 [`代码/agent-harness-course`](../代码/agent-harness-course/README.md)。
 
 ---
 
@@ -1093,6 +1093,6 @@ Harness 的测试要覆盖确定性内核，而不是依赖真实模型碰运气
 - FakeProvider、Golden Trace 与故障测试；
 - 一份解释关键取舍的设计文档。
 
-建议按以下顺序推进：先运行 [`代码/agent-harness-course`](../代码/agent-harness-course/README.md) 的 Demo 和测试；再阅读 [`TraceForge-Agent-Harness-项目设计文档.md`](./TraceForge-Agent-Harness-项目设计文档.md)；最后任选一个真实工具接入，并为它补上策略、幂等键、失败恢复和评测用例。
+建议按以下顺序推进：先运行 [`代码/agent-harness-course`](../代码/agent-harness-course/README.md) 的 Demo 和测试；再阅读 [`TraceForge-问题驱动设计与面试答案.md`](../面经/TraceForge-问题驱动设计与面试答案.md)；最后任选一个真实工具接入，并为它补上策略、幂等键、失败恢复和评测用例。
 
 判断是否真正学会，可以问自己：删除真实模型和所有 UI 后，我的 Harness 核心还能否被稳定地测试、重放、解释和恢复？如果答案是肯定的，就已经从“会调用模型”走到了“会做 Agent 工程”。
