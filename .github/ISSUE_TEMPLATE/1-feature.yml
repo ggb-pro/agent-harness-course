@@ -1,0 +1,23 @@
+name: sonic 能力请求
+description: 用真实任务与验收证据说明能力需求
+title: "feat: "
+labels: ["enhancement"]
+body:
+  - type: textarea
+    id: task
+    attributes:
+      label: 用户要完成什么
+      description: 给一个可复现的任务，而不只是接口名称。
+    validations:
+      required: true
+  - type: textarea
+    id: evidence
+    attributes:
+      label: 完成证据与失败边界
+      description: 如何验证完成？哪些行为必须禁止？
+    validations:
+      required: true
+  - type: textarea
+    id: alternatives
+    attributes:
+      label: 现有方案与取舍
