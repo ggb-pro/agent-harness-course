@@ -19,5 +19,5 @@ jobs:
       - name: Teaching baseline
         working-directory: 代码/sonic
         run: PYTHONPATH=src python -m unittest discover -s tests -v
-      - name: Local links and sensitive-file guard
+      - name: Four docs, local links and sensitive-file guard
         run: python 代码/sonic/scripts/check_repo.py

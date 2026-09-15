@@ -1,4 +1,4 @@
-"""检查本地文档链接和不该入库的文件；不访问网络。"""
+"""检查四文档、链接和不该入库的文件；不访问网络。"""
 
 from __future__ import annotations
 
@@ -11,6 +11,20 @@ from urllib.parse import unquote
 REPO_ROOT = Path(__file__).resolve().parents[3]
 MARKDOWN_LINK = re.compile(r"!?(?:\[[^\]]+\])\(([^)]+)\)")
 URL_SCHEME = re.compile(r"^[a-z][a-z0-9+.-]*:", re.IGNORECASE)
+EXPECTED_DOCS = {"README.md", "学习文档.md", "设计说明.md", "面经.md"}
+
+
+def check_four_documents() -> list[str]:
+    found = {
+        str(path.relative_to(REPO_ROOT)).replace("\\", "/")
+        for path in REPO_ROOT.rglob("*.md")
+        if ".git" not in path.parts and ".venv" not in path.parts
+    }
+    if found == EXPECTED_DOCS:
+        return []
+    extra = sorted(found - EXPECTED_DOCS)
+    missing = sorted(EXPECTED_DOCS - found)
+    return [f"Markdown 必须恰好四份；多余: {extra}；缺少: {missing}"]
 
 
 def check_local_links() -> list[str]:
@@ -46,8 +60,8 @@ def check_sensitive_files() -> list[str]:
 
 
 if __name__ == "__main__":
-    errors = check_local_links() + check_sensitive_files()
+    errors = check_four_documents() + check_local_links() + check_sensitive_files()
     if errors:
         print("\n".join(errors), file=sys.stderr)
         raise SystemExit(1)
-    print("本地链接与敏感文件名检查通过")
+    print("四文档、本地链接与敏感文件名检查通过")
