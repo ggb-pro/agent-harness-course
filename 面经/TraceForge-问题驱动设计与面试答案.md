@@ -20,15 +20,30 @@
 ### 读图：哪些组件各守一道门？
 
 ```text
-用户任务 → RepoFix Profile → Runner（决定当前阶段）
+用户任务 → Profile（定义任务阶段）→ Runner（推进通用状态）
                          ├→ ContextBuilder（给模型哪些证据）→ Provider（模型）
                          ├→ ToolRuntime（执行哪个动作）→ Policy（能否执行）
                          │                         └→ Effect Journal（执行与对账）→ 沙箱
                          ├→ Event Store（记录事实）→ RunState/Timeline
-                         └→ Verifier（检查补丁、测试与约束）
+                         └→ CompletionContract（任务自己的完成条件）
 ```
 
-Profile 是任务配置，不拥有底层权限；Provider 只返回提案，不直接执行 Tool；Policy 判断能否执行，沙箱限制实际能力；Journal 解决“可能已经执行”的不确定性；Verifier 判断用户目标。参考 [nanobot 的可读主循环](https://github.com/HKUDS/nanobot/blob/main/docs/architecture.md)、[DeepSeek Harness 的 Core/Session](https://github.com/deepseek-ai/deepseek-harness/blob/master/docs/subsystems/core.md) 与 [Session](https://github.com/deepseek-ai/deepseek-harness/blob/master/docs/subsystems/session.md)，以及 [Claude Code 公开的插件契约](https://github.com/anthropics/claude-code/blob/main/plugins/plugin-dev/README.md)；这些只用于学习公开能力与取舍，不推断未公开的内部实现。Effect 对账和故障注入来自通用可靠性工程，不能说是上述项目的专有设计。
+Profile 是任务配置，不拥有底层权限；Provider 只返回提案，不直接执行 Tool；Policy 判断能否执行，沙箱限制实际能力；Journal 解决“可能已经执行”的不确定性；CompletionContract 判断该类任务是否完成。参考 [nanobot 的可读主循环](https://github.com/HKUDS/nanobot/blob/main/docs/architecture.md)、[DeepSeek Harness 的 Core/Session](https://github.com/deepseek-ai/deepseek-harness/blob/master/docs/subsystems/core.md) 与 [Session](https://github.com/deepseek-ai/deepseek-harness/blob/master/docs/subsystems/session.md)，以及 [Claude Code 公开的插件契约](https://github.com/anthropics/claude-code/blob/main/plugins/plugin-dev/README.md)；这些只用于学习公开能力与取舍，不推断未公开的内部实现。Effect 对账和故障注入来自通用可靠性工程，不能说是上述项目的专有设计。
+
+### 架构追问：以后从 RepoFix 扩展成通用 Agent 助手，能否只换 Profile？
+
+**方向上可以，当前还做不到。** Provider、ToolRuntime、Policy、Event Store 和 ContextBuilder 已在目标架构里分层；但课程代码没有真正的 Profile 契约。若把“定位代码→修改文件→运行测试”写死在 Runner，日程查询或资料整理都会被迫假装是修仓库。Runner 只应掌管通用的请求、提案、授权、执行、观察、预算、恢复与终态；**任务阶段属于 Profile，完成条件属于 CompletionContract**。
+
+目标 Profile 明确提供 `task_schema、stage_plan、context_sources、tool_manifests、policy_scope、completion_contract、execution_adapter、eval_suite`。它只能在用户授权与内核能力内收紧权限，不能替换 Journal 或绕过策略。扩展时换配置和实现，不改事件事实、审批、副作用或预算语义。
+
+| 问题 | RepoFix Profile | 通用助手的一个受限 Profile |
+| --- | --- | --- |
+| 要完成什么 | 修复指定仓库问题 | 整理资料并给出带证据的答复，或执行一次明确授权的日程动作 |
+| 可用工具 | 受限文件读取、补丁、测试 | 按任务授权的检索/日程工具；写操作仍过审批与 Journal |
+| 如何判断完成 | 路径、diff、目标测试、相关回归 | 答复核对来源与不确定性；日程动作核对外部 receipt，不把模型自述当完成 |
+| 运行环境 | 固定 SHA 工作区和命令沙箱 | 无仓库阶段；按工具风险决定网络、凭据与隔离范围 |
+
+通用助手还需要 `Session`：一个会话包含多个独立 Run，保存主体/租户、授权范围和对话引用；每个 Run 自己结算预算与审批，跨 Run 的 Memory 只能在用户许可、来源和删除规则下启用。聊天、CLI 或其他入口只是 Channel Adapter，不拥有 RunState。首个演进实验应让 RepoFix 与一个**只读资料整理 Profile**共用同一 Runner，通过两套评测而不改内核控制流；之后再增加有审批和 receipt 的日程写操作。若第二个 Profile 仍需改 Runner 的任务分支，说明抽象失败，先修接口再加功能。当前这些都是设计目标，不能称为已实现的通用助手。
 
 ## A. Agent 与 Harness 核心链路
 
@@ -268,7 +283,8 @@ Effect 的稳定身份由已持久化的 `call_id`、工具/服务器版本、�
 | M3 持久化恢复 | SQLite 事务、Effect 意图/receipt、UNKNOWN 对账；跨进程 crash matrix 无盲重试 |
 | M4 RepoFix 闭环 | 固定 SHA 隔离 worktree + **真正沙箱** + 测试与 diff Verifier；沙箱失败关闭、无自动推送 |
 | M5 质量证据 | 分层任务集、同题基线、失败桶、复现脚本；如实报告不确定性 |
-| M6 有数据才扩展 | 只读 Explore、并行/MCP/Memory/路由逐项做增量实验 |
+| M6 通用助手验证 | 第二个只读资料整理 Profile 共用 Runner；会话与 Run 分离、答复证据验收；无需给 Runner 加任务专用分支 |
+| M7 有数据才扩展 | 只读 Explore、并行/MCP/Memory/路由逐项做增量实验 |
 
 CLI 目标入口是 `run --profile repofix`、`inspect RUN_ID`、`replay RUN_ID --offline`、`resume RUN_ID`、`effects reconcile RUN_ID`、`eval --suite repofix-v1`；API 若需要才提供创建/读取/审批/恢复，写接口带幂等键。以上都是**设计接口**，当前课程代码没有这些命令。ADR 记录每个关键决定、替代方案、代价和撤销条件：SQLite 事实源、Provider 与 Runner 分离、Policy 与 Tool 分离、外部副作用不承诺原子、Verifier 代替模型自评、Profile 显式组合、先演进 Python 而非为了面试改写语言。
 
