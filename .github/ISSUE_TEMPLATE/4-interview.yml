@@ -1,0 +1,32 @@
+name: 面经候选线索
+description: 每周公开来源候选；不能冒充企业官方题库
+title: "interview: "
+body:
+  - type: input
+    id: url
+    attributes:
+      label: 原始公开链接
+    validations:
+      required: true
+  - type: input
+    id: dates
+    attributes:
+      label: 发布日期、实际事件日期（未知则注明）
+    validations:
+      required: true
+  - type: dropdown
+    id: source_type
+    attributes:
+      label: 来源类别
+      options:
+        - 官方资料
+        - 一手候选人自述
+        - 公开讨论或转载
+    validations:
+      required: true
+  - type: textarea
+    id: candidate
+    attributes:
+      label: 考点、已有题号和去重判断
+    validations:
+      required: true

@@ -1,0 +1,24 @@
+name: Harness 技术来源更新
+description: 登记公开技术变化，先核验再决定是否采用
+title: "docs: "
+labels: ["documentation"]
+body:
+  - type: input
+    id: url
+    attributes:
+      label: 原始官方来源 URL
+    validations:
+      required: true
+  - type: input
+    id: date
+    attributes:
+      label: 发布日期与核验日期
+    validations:
+      required: true
+  - type: textarea
+    id: difference
+    attributes:
+      label: 与现有文档或 sonic 设计的差异
+      description: 区分公开事实、我们的推断和待做实验。
+    validations:
+      required: true

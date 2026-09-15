@@ -1,0 +1,15 @@
+[build-system]
+requires = ["setuptools>=68"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "sonic-agent"
+version = "0.3.0"
+description = "The auditable teaching core for the evolving sonic assistant"
+requires-python = ">=3.10"
+readme = "README.md"
+license = {text = "MIT"}
+
+[tool.setuptools.packages.find]
+where = ["src"]
+

@@ -1,0 +1,22 @@
+name: 故障或错误完成
+description: 报告可复现故障；不要公开粘贴凭据或个人数据
+title: "fix: "
+labels: ["bug"]
+body:
+  - type: textarea
+    id: repro
+    attributes:
+      label: 合成样例与复现步骤
+      description: 不包含密钥、真实用户会话或敏感仓库内容。
+    validations:
+      required: true
+  - type: textarea
+    id: expected
+    attributes:
+      label: 预期与实际结果
+    validations:
+      required: true
+  - type: textarea
+    id: evidence
+    attributes:
+      label: 版本、测试或事件证据
