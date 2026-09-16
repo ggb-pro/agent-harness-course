@@ -11,6 +11,8 @@ from urllib.parse import unquote
 REPO_ROOT = Path(__file__).resolve().parents[3]
 MARKDOWN_LINK = re.compile(r"!?(?:\[[^\]]+\])\(([^)]+)\)")
 URL_SCHEME = re.compile(r"^[a-z][a-z0-9+.-]*:", re.IGNORECASE)
+MARKDOWN_HEADING = re.compile(r"^#{1,6}\s+(.+?)\s*#*\s*$")
+CODE_LINE_FRAGMENT = re.compile(r"^L([1-9]\d*)(?:-L([1-9]\d*))?$", re.IGNORECASE)
 EXPECTED_DOCS = {"README.md", "学习文档.md", "设计说明.md", "面经.md"}
 
 
@@ -27,23 +29,64 @@ def check_four_documents() -> list[str]:
     return [f"Markdown 必须恰好四份；多余: {extra}；缺少: {missing}"]
 
 
+def markdown_anchors(path: Path) -> set[str]:
+    """Build the subset of GitHub heading slugs used by this repository."""
+
+    anchors: set[str] = set()
+    occurrences: dict[str, int] = {}
+    for line in path.read_text(encoding="utf-8").splitlines():
+        match = MARKDOWN_HEADING.match(line)
+        if match is None:
+            continue
+        heading = re.sub(r"<[^>]+>", "", match.group(1)).lower()
+        base = re.sub(r"[^\w\s-]", "", heading, flags=re.UNICODE)
+        base = re.sub(r"\s+", "-", base).strip("-")
+        occurrence = occurrences.get(base, 0)
+        occurrences[base] = occurrence + 1
+        anchors.add(base if occurrence == 0 else f"{base}-{occurrence}")
+    return anchors
+
+
 def check_local_links() -> list[str]:
     problems: list[str] = []
+    anchor_cache: dict[Path, set[str]] = {}
+    line_count_cache: dict[Path, int] = {}
     for source in REPO_ROOT.rglob("*.md"):
         if ".git" in source.parts or ".venv" in source.parts:
             continue
         text = source.read_text(encoding="utf-8")
         for match in MARKDOWN_LINK.finditer(text):
             raw = match.group(1).strip()
-            if not raw or raw.startswith("#") or URL_SCHEME.match(raw):
+            if not raw or URL_SCHEME.match(raw):
                 continue
             # 本仓库不用带 title 的链接；尖括号仅表示路径有空格。
-            path_part = unquote(raw.split("#", 1)[0].strip("<>"))
-            target = (source.parent / path_part).resolve()
+            path_and_fragment = raw.strip("<>").split("#", 1)
+            path_part = unquote(path_and_fragment[0])
+            fragment = unquote(path_and_fragment[1]) if len(path_and_fragment) == 2 else ""
+            target = source.resolve() if not path_part else (source.parent / path_part).resolve()
             if not target.is_relative_to(REPO_ROOT):
                 problems.append(f"{source.relative_to(REPO_ROOT)}: 链接越出仓库: {raw}")
             elif not target.exists():
                 problems.append(f"{source.relative_to(REPO_ROOT)}: 找不到 {raw}")
+            elif fragment:
+                line_match = CODE_LINE_FRAGMENT.fullmatch(fragment)
+                if line_match is not None:
+                    line_count = line_count_cache.setdefault(
+                        target,
+                        len(target.read_text(encoding="utf-8").splitlines()),
+                    )
+                    start = int(line_match.group(1))
+                    end = int(line_match.group(2) or start)
+                    if end < start or end > line_count:
+                        problems.append(
+                            f"{source.relative_to(REPO_ROOT)}: 行号越界 {raw}"
+                        )
+                elif target.suffix.lower() == ".md":
+                    anchors = anchor_cache.setdefault(target, markdown_anchors(target))
+                    if fragment.lower() not in anchors:
+                        problems.append(
+                            f"{source.relative_to(REPO_ROOT)}: 找不到标题锚点 {raw}"
+                        )
     return problems
 
 

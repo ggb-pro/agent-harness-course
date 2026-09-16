@@ -5,13 +5,14 @@ from __future__ import annotations
 from dataclasses import dataclass
 from datetime import datetime
 import hashlib
+import inspect
 import json
 import uuid
 from typing import Any, Callable
 
 from .completion import CompletionContract, CompletionDecision
 from .events import EventStore, utc_now
-from ..models.model import Provider
+from ..models.model import ModelAccess, ModelResponseMetadata, Provider, ProviderError, ProviderInfo
 from .state import project_state
 from ..capabilities.tools import ToolRuntime
 
@@ -43,7 +44,23 @@ class AgentRunner:
             raise ValueError("model, tool and repetition limits must be positive")
         if deadline_at is not None and datetime.fromisoformat(deadline_at).tzinfo is None:
             raise ValueError("deadline_at must include a timezone")
+        try:
+            provider_info = provider.info
+        except Exception:
+            raise TypeError("provider must expose a stable ProviderInfo via .info") from None
+        complete = getattr(provider, "complete", None)
+        if not isinstance(provider_info, ProviderInfo) or not callable(complete):
+            raise TypeError("provider must implement the current Provider contract")
+        try:
+            complete_signature = inspect.signature(complete)
+        except (TypeError, ValueError):
+            raise TypeError("provider.complete must expose an inspectable current signature") from None
+        try:
+            complete_signature.bind([], access=ModelAccess())
+        except TypeError:
+            raise TypeError("provider.complete must accept messages and the access keyword") from None
         self.provider = provider
+        self.provider_info = provider_info
         self.tools = tools
         self.event_store = event_store
         self.max_turns = max_turns
@@ -54,8 +71,20 @@ class AgentRunner:
         self.clock = clock
         self.completion = completion
 
-    def run(self, prompt: str, run_id: str | None = None) -> RunResult:
+    def run(
+        self,
+        prompt: str,
+        run_id: str | None = None,
+        *,
+        model_access: ModelAccess | None = None,
+    ) -> RunResult:
         run_id = run_id or f"run-{uuid.uuid4().hex[:12]}"
+        if model_access is None:
+            access = ModelAccess()
+        elif isinstance(model_access, ModelAccess):
+            access = model_access
+        else:
+            raise TypeError("model_access must be a ModelAccess instance")
         if self.event_store.load(run_id):
             raise ValueError(f"run already exists: {run_id}; resume is not implemented")
         messages: list[dict[str, Any]] = [{"role": "user", "content": prompt}]
@@ -99,15 +128,53 @@ class AgentRunner:
                 return finish("failed", "repeated identical tool action and observation without progress")
 
             turn = state.model_calls + 1
-            emit("model.requested", {"turn": turn})
+            provider_info = self.provider_info
+            provider_payload = self._provider_payload(provider_info)
+            if not access.allows(provider_info):
+                emit("model.denied", {
+                    "turn": turn,
+                    **provider_payload,
+                    "grant_ref": self._grant_reference(access.grant_id),
+                    "reason": "remote model access was not authorized for this endpoint",
+                })
+                return finish("failed", "model call failed [egress_denied]: remote model access was not authorized")
+            emit("model.requested", {
+                "turn": turn,
+                **provider_payload,
+                "grant_ref": self._grant_reference(access.grant_id),
+            })
             try:
-                response = self.provider.complete(messages)
-            except Exception as exc:
-                return finish("failed", f"model call failed: {exc}")
+                response = self.provider.complete(messages, access=access)
+            except ProviderError as exc:
+                emit("model.failed", {
+                    "turn": turn,
+                    **provider_payload,
+                    "code": exc.code,
+                    "retryable": exc.retryable,
+                    "status_code": exc.status_code,
+                    "request_id": exc.request_id,
+                    "latency_ms": exc.latency_ms,
+                    "message": exc.safe_message,
+                })
+                return finish("failed", f"model call failed [{exc.code}]: {exc.safe_message}")
+            except Exception:
+                emit("model.failed", {
+                    "turn": turn,
+                    **provider_payload,
+                    "code": "internal",
+                    "retryable": False,
+                    "status_code": None,
+                    "request_id": None,
+                    "latency_ms": None,
+                    "message": "model provider failed unexpectedly",
+                })
+                return finish("failed", "model call failed [internal]: model provider failed unexpectedly")
 
             emit("model.responded", {
                 "turn": turn, "text": response.text,
                 "tool_calls": [call.name for call in response.tool_calls],
+                **provider_payload,
+                **self._metadata_payload(response.metadata),
             })
             if not response.tool_calls:
                 if self.completion is None:
@@ -115,15 +182,22 @@ class AgentRunner:
                 else:
                     try:
                         decision = self.completion.verify(prompt, response.text, self.event_store.load(run_id))
-                    except Exception as exc:
-                        decision = CompletionDecision("unverified", f"completion check unavailable: {exc}")
+                    except Exception:
+                        decision = CompletionDecision("unverified", "completion check unavailable")
                 emit("run.verification", {"status": decision.status, "reason": decision.reason})
                 if decision.status == "completed":
                     emit("run.completed", {"answer": response.text})
                     return RunResult(run_id, "completed", answer=response.text)
                 return finish(decision.status, decision.reason or "completion check did not pass", response.text)
 
-            messages.append({"role": "assistant", "content": response.text})
+            messages.append({
+                "role": "assistant",
+                "content": response.text,
+                "tool_calls": [
+                    {"id": call.id, "name": call.name, "arguments": call.arguments}
+                    for call in response.tool_calls
+                ],
+            })
             for call in response.tool_calls:
                 state = project_state(self.event_store.load(run_id))
                 revision = state.revision
@@ -144,3 +218,45 @@ class AgentRunner:
                     "role": "tool", "call_id": call.id, "name": call.name,
                     "content": result.value if result.ok else {"error": result.error, "denied": result.denied},
                 })
+
+    @staticmethod
+    def _provider_payload(info: ProviderInfo) -> dict[str, Any]:
+        return {
+            "provider": info.provider,
+            "requested_model": info.requested_model,
+            "transport": info.transport,
+            "endpoint_origin": info.endpoint_origin,
+        }
+
+    @staticmethod
+    def _grant_reference(grant_id: str | None) -> str | None:
+        if grant_id is None:
+            return None
+        return f"sha256:{hashlib.sha256(grant_id.encode('utf-8')).hexdigest()[:16]}"
+
+    @staticmethod
+    def _metadata_payload(metadata: ModelResponseMetadata | None) -> dict[str, Any]:
+        if metadata is None:
+            return {
+                "resolved_model": None,
+                "response_id": None,
+                "request_id": None,
+                "response_status": None,
+                "latency_ms": None,
+                "usage": None,
+            }
+        usage = metadata.usage
+        return {
+            "resolved_model": metadata.resolved_model,
+            "response_id": metadata.response_id,
+            "request_id": metadata.request_id,
+            "response_status": metadata.status,
+            "latency_ms": metadata.latency_ms,
+            "usage": None if usage is None else {
+                "input_tokens": usage.input_tokens,
+                "output_tokens": usage.output_tokens,
+                "total_tokens": usage.total_tokens,
+                "cached_input_tokens": usage.cached_input_tokens,
+                "reasoning_output_tokens": usage.reasoning_output_tokens,
+            },
+        }

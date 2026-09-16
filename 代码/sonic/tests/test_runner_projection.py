@@ -41,6 +41,9 @@ class RunnerProjectionTests(unittest.TestCase):
         result = runner.run("calculate", run_id="r2")
         projection = project_run(store.load("r2"))
         self.assertEqual(result.answer, "42")
+        self.assertEqual(provider.calls[1][-2]["tool_calls"], [
+            {"id": "c1", "name": "double", "arguments": {"value": 21}},
+        ])
         self.assertEqual(provider.calls[1][-1]["content"], 42)
         self.assertEqual(projection.tool_calls, 1)
 

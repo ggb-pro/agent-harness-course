@@ -4,10 +4,13 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "sonic-agent"
-version = "0.3.0"
+version = "0.4.0"
 description = "The auditable teaching core for the evolving sonic assistant"
 requires-python = ">=3.10"
 license = {text = "MIT"}
+
+[project.optional-dependencies]
+openai = ["openai>=3,<4"]
 
 [tool.setuptools.packages.find]
 where = ["src"]
