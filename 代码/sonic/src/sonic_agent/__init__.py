@@ -3,7 +3,17 @@
 from .core.context import ContextBuilder, ContextItem
 from .core.completion import CompletionContract, CompletionDecision, ExactTextCompletion
 from .core.events import Event, InMemoryEventStore, JsonlEventStore, RevisionConflict, SqliteEventStore
-from .models.model import AssistantResponse, FakeProvider, ToolCall
+from .models.model import (
+    AssistantResponse,
+    FakeProvider,
+    ModelAccess,
+    ModelResponseMetadata,
+    ProviderError,
+    ProviderInfo,
+    TokenUsage,
+    ToolCall,
+)
+from .models.openai_responses import OpenAIResponsesProvider
 from .core.projections import RunProjection, project_run
 from .core.runner import AgentRunner, RunResult
 from .core.state import RunState, project_state
@@ -29,6 +39,11 @@ __all__ = [
     "FakeProvider",
     "InMemoryEventStore",
     "JsonlEventStore",
+    "ModelAccess",
+    "ModelResponseMetadata",
+    "OpenAIResponsesProvider",
+    "ProviderError",
+    "ProviderInfo",
     "RevisionConflict",
     "RunState",
     "SqliteEventStore",
@@ -38,6 +53,7 @@ __all__ = [
     "ToolRegistry",
     "ToolResult",
     "ToolRuntime",
+    "TokenUsage",
     "project_run",
     "project_state",
 ]
