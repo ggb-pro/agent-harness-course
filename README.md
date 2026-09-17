@@ -1,38 +1,45 @@
-# 导航：Sonic 与 Agent Harness
+# Sonic：从可用的编码助手走向个人通用助手
 
-Sonic 的最终目标是聪明、强大且可信的个人通用 AI 助手。当前第一主线是先做一个真正可用的 Claude Code 类本地编码 Agent：理解仓库、修改代码、运行测试并用证据交付，再逐步扩展为通用助手。仓库现有代码仍是可复用的**教学原型**，后续允许大幅重构。
+先让 Sonic 在真实代码仓库里完成读、改、测和交付，再逐步扩展为通用助手。产品行为参考 Claude Code，运行内核自行实现，重点是能理解、能复现、能持续改进。
 
-整个仓库只有四份 Markdown，按目的进入即可：
+## 四个入口
 
-| 你要找什么 | 唯一入口 | 建议读法 |
-| --- | --- | --- |
-| Harness 体系知识 | [学习文档](./学习文档.md) | 从 Agent Loop 开始，系统学习工具、权限、上下文、会话、验证和扩展。 |
-| Sonic 的产品与工程设计 | [设计说明](./设计说明.md) | 查看编码 Agent 的完整目标架构、数据契约、路线和验收门禁。 |
-| 代码 | [sonic 源码](./代码/sonic/) | 用下面的命令跑演示与完整自动化测试；能力证据在设计说明。 |
-| 面试准备与每周变化 | [面经](./面经.md) | 按 48 题的 A→F 主题查答案，来源和周报在同一页底部。 |
+| 内容 | 从哪里开始 |
+| --- | --- |
+| [学习文档](./学习文档.md) | 围绕一个折扣金额 Bug，跑通修复，再制造冲突、超时和恢复，理解 Harness |
+| [设计说明](./设计说明.md) | Sonic v0.1 的范围、协议、工具、SQLite、恢复窗口、提交计划和验收 |
+| [代码](./代码/sonic/) | 现有教学原型与 Mini Sonic 实验；产品 CLI 尚待实现 |
+| [面经](./面经.md) | 独立题库与来源更新，项目能力以设计说明为准 |
 
-## 快速验证
+## 先运行课程实验
 
-进入 `代码/sonic`，使用 Python 3.10+：
+从仓库根目录执行，Python 3.10+，只用标准库，无需 API Key：
 
 ```powershell
+python 代码/sonic/examples/mini_sonic.py --case normal
+python 代码/sonic/examples/mini_sonic.py --case stale
+python 代码/sonic/examples/mini_sonic.py --case resume
+```
+
+分别观察正常修复、用户修改引发的冲突、由第二个进程接续工作。文件和测试真实发生在临时目录，决策来自假模型；这些结果不代表真实模型成功率。全部七个实验见[学习文档第二章](./学习文档.md#二运行同一个实验)。
+
+## 当前能运行什么
+
+`sonic_agent 0.5.0` 是旧教学包，已有同步循环、事件存储、纯文本 Provider 和只读仓库工具。尚无产品 `sonic` CLI、真实模型工具流、通用编辑和检查命令闭环。
+
+本轮文档定义的是新的产品 **Sonic v0.1**，不是已经发布的版本。现有代码处理方式见[迁移表](./设计说明.md#十一当前代码与迁移)，下一步从[提交 C1](./设计说明.md#十按提交推进而不是一次造完)开始。
+
+验证旧原型与新课程实验：
+
+```powershell
+cd 代码/sonic
 python -m pip install -e ".[openai]"
-$env:PYTHONPATH = "src"
-python examples/demo.py
 python -m unittest discover -s tests -v
 python scripts/check_repo.py
 ```
 
-离线 Demo、仓库工具与 Provider 边界测试不需要 API Key 或联网；安装 OpenAI SDK 后还会运行一项 SDK 构造兼容性检查。现有代码提供 OpenAI Responses **纯文本 Provider 基线**和三个**本地只读仓库工具**，尚未实现真实 Provider 工具流、写文件、Shell、交互式 CLI、Session 恢复和上下文压缩。准确现状与迁移决定见[设计说明的现有代码章节](./设计说明.md#13-现有代码怎样处理)，动手入门见[学习文档的最小 Agent Loop](./学习文档.md#2-先亲手写一个最小-agent-loop)。
+这组测试不发真实模型请求。安装依赖需要联网；Windows 下无法创建符号链接、以及 POSIX 专用测试可能跳过，CI 同时运行 Windows/Linux。
 
-要自行进行会产生远程请求的纯文本 smoke，先在当前环境安全设置 `OPENAI_API_KEY`，再明确选择模型和放行本次调用：
+## 维护方式
 
-```powershell
-$env:SONIC_OPENAI_MODEL = "<你明确选择的模型>"
-$env:SONIC_ALLOW_REMOTE = "1"
-python examples/openai_text.py
-```
-
-这会把脚本中的固定测试句发送到 `https://api.openai.com`，可能产生费用；仓库维护者尚未把它作为已通过证据。请求显式设置 `store=False`，但这不等于 Zero Data Retention，服务端处理与保留仍受账户及 [OpenAI 数据控制](https://developers.openai.com/api/docs/guides/your-data)约束。实现见 [OpenAIResponsesProvider](./代码/sonic/src/sonic_agent/models/openai_responses.py)，安全边界见 [Provider 测试](./代码/sonic/tests/test_openai_provider.py)。
-
-后续维护以 GitHub 最新 `main` 为基准，按[仓库与文档约束](./设计说明.md#19-仓库与文档约束)修改、验证、通过 PR/CI 合入并核对远端。旧内容保留在 Git 历史，不把过期 ZIP 作为另一份源码提交。
+GitHub main 是基准，通过分支、PR 和 CI 更新；仓库保持四份 Markdown。新机制以可运行实验和任务证据决定是否采用，范围及细则见[仓库维护约束](./设计说明.md#十三仓库维护约束)。
