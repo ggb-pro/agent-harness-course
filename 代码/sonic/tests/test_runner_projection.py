@@ -9,6 +9,7 @@ from sonic_agent import (
     ToolCall,
     ToolRegistry,
     ToolRuntime,
+    ToolError,
     project_run,
 )
 
@@ -46,6 +47,30 @@ class RunnerProjectionTests(unittest.TestCase):
         ])
         self.assertEqual(provider.calls[1][-1]["content"], 42)
         self.assertEqual(projection.tool_calls, 1)
+
+    def test_structured_tool_failure_is_returned_to_next_model_turn(self):
+        store = InMemoryEventStore()
+        registry = ToolRegistry()
+        registry.register("bounded.read", lambda _: (_ for _ in ()).throw(ToolError(
+            "path_scope_denied", "repository path is outside the allowed scope", denied=True
+        )))
+        provider = FakeProvider([
+            AssistantResponse(tool_calls=(ToolCall("c1", "bounded.read", {}),)),
+            AssistantResponse("stopped"),
+        ])
+        runner = AgentRunner(
+            provider,
+            ToolRuntime(registry, store),
+            store,
+            completion=ExactTextCompletion("stopped"),
+        )
+        self.assertEqual(runner.run("read", run_id="structured-error").status, "completed")
+        self.assertEqual(provider.calls[1][-1]["content"], {
+            "error": "repository path is outside the allowed scope",
+            "error_code": "path_scope_denied",
+            "retryable": False,
+            "denied": True,
+        })
 
     def test_provider_failure_becomes_failed_run_event(self):
         runner, _, store = make_runner([])

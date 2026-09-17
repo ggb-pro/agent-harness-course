@@ -5,8 +5,11 @@ from sonic_agent import (
     EffectJournal,
     InMemoryEventStore,
     ToolCall,
+    ToolError,
+    ToolOutput,
     ToolRegistry,
     ToolRuntime,
+    ToolSpec,
 )
 
 
@@ -21,8 +24,9 @@ class ToolTests(unittest.TestCase):
         registry.register("echo", lambda args: args)
         with self.assertRaises(ValueError):
             registry.register("echo", lambda args: args)
-        with self.assertRaises(KeyError):
+        with self.assertRaises(ToolError) as caught:
             registry.execute("missing", {})
+        self.assertEqual(caught.exception.code, "unknown_tool")
 
     def test_path_policy_denies_sensitive_component(self):
         policy = DenyPathPolicy()
@@ -62,6 +66,51 @@ class ToolTests(unittest.TestCase):
         self.assertTrue(result.denied)
         self.assertEqual(executed, [])
         self.assertEqual([event.type for event in store.load("run")], ["tool.requested", "tool.denied"])
+
+    def test_registry_exposes_sorted_manifest(self):
+        registry = ToolRegistry()
+        registry.register("z.read", lambda args: args, spec=ToolSpec("z.read", read_only=True))
+        registry.register("a.write", lambda args: args)
+        self.assertEqual(registry.names, ("a.write", "z.read"))
+        self.assertEqual([spec.name for spec in registry.manifest()], ["a.write", "z.read"])
+        self.assertTrue(registry.spec("z.read").read_only)
+
+    def test_runtime_does_not_cache_read_only_tools_and_persists_receipt_only(self):
+        values = []
+        store = InMemoryEventStore()
+        registry = ToolRegistry()
+
+        def read(_):
+            values.append(len(values) + 1)
+            return ToolOutput({"secret_content": values[-1]}, {"sha256": "safe"})
+
+        registry.register("repo.read", read, spec=ToolSpec("repo.read", read_only=True))
+        runtime = ToolRuntime(registry, store)
+        first = runtime.run("run", ToolCall("same", "repo.read", {}))
+        second = runtime.run("run", ToolCall("same", "repo.read", {}))
+        self.assertEqual((first.value, second.value), ({"secret_content": 1}, {"secret_content": 2}))
+        self.assertFalse(first.cached)
+        completed = [event.payload for event in store.load("run") if event.type == "tool.completed"]
+        self.assertEqual([event["receipt"] for event in completed], [{"sha256": "safe"}] * 2)
+        self.assertNotIn("secret_content", repr(completed))
+
+    def test_runtime_redacts_unknown_tool_name_and_unexpected_error(self):
+        store = InMemoryEventStore()
+        registry = ToolRegistry()
+        registry.register("fail", lambda _: (_ for _ in ()).throw(RuntimeError("C:/secret/token")))
+        runtime = ToolRuntime(registry, store)
+
+        failed = runtime.run("run", ToolCall("1", "fail", {}))
+        missing = runtime.run("run", ToolCall("2", "evil.secret-name", {"token": "secret"}))
+
+        self.assertEqual((failed.error_code, failed.error), (
+            "internal_error", "tool execution failed unexpectedly"
+        ))
+        self.assertEqual(missing.error_code, "unknown_tool")
+        serialized = repr([event.payload for event in store.load("run")])
+        self.assertNotIn("C:/secret/token", serialized)
+        self.assertNotIn("evil.secret-name", serialized)
+        self.assertNotIn("secret'", serialized)
 
 
 if __name__ == "__main__":

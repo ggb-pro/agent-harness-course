@@ -1,6 +1,6 @@
 # 导航：sonic 与 Agent Harness
 
-sonic 的最终目标是聪明、强大且可信的通用 AI 助手。现在先把受限仓库问题助手作为第一个真实场景推进；仓库当前仍是可运行的**教学内核**，并非已能自动修复真实仓库的产品。
+sonic 的最终目标是聪明、强大且可信的通用 AI 助手。现在先把受限仓库问题助手作为第一个真实场景推进；仓库已有绑定固定工作区的只读列举、读取与字面搜索能力，但仍是可运行的**教学内核**，并非已能自动诊断或修复真实仓库的产品。
 
 整个仓库只有四份 Markdown，按目的进入即可：
 
@@ -23,7 +23,7 @@ python -m unittest discover -s tests -v
 python scripts/check_repo.py
 ```
 
-离线 Demo 与 Provider 边界测试不需要 API Key 或联网；安装 OpenAI SDK 后还会运行一项真实 SDK 构造兼容性检查。代码已提供 OpenAI Responses **纯文本 Provider 基线**：每次 `Runner.run(...)` 都要单独传入本 Run 的远程授权，授权不会保存在 Runner 上供下一次复用；凭据只从环境变量读取。当前证据来自离线测试和对 SDK 构造器的 mock，尚未完成真实联网 smoke，也未完成 OpenAI Function Calling 工具闭环、隔离修复、跨进程效果对账或 RepoFix Verifier。逐项状态见[设计说明的能力表](./设计说明.md#当前代码到底实现到哪)。
+离线 Demo、仓库工具与 Provider 边界测试不需要 API Key 或联网；安装 OpenAI SDK 后还会运行一项真实 SDK 构造兼容性检查。代码已提供 OpenAI Responses **纯文本 Provider 基线**和三个**本地只读仓库工具**：根目录由可信调用方绑定，模型只能给相对路径，列举/读取/字面搜索都有硬上限并拒绝越界、敏感文件和链接路径。每次 `Runner.run(...)` 都要单独传入本 Run 的远程授权，凭据只从环境变量读取。尚未完成真实联网 smoke、OpenAI Function Calling、Git 版本冻结、测试发现/执行、诊断 Verifier、隔离修复或跨进程效果对账。逐项状态见[设计说明的能力表](./设计说明.md#当前代码到底实现到哪)，动手代码见[学习文档第三讲](./学习文档.md#第三讲模型建议到-tool-执行之间必须过哪些门)。
 
 要自行进行会产生远程请求的纯文本 smoke，先在当前环境安全设置 `OPENAI_API_KEY`，再明确选择模型和放行本次调用：
 

@@ -20,10 +20,14 @@ from .core.state import RunState, project_state
 from .capabilities.tools import (
     DenyPathPolicy,
     EffectJournal,
+    ToolError,
+    ToolOutput,
     ToolRegistry,
     ToolResult,
     ToolRuntime,
+    ToolSpec,
 )
+from .capabilities.repository import ReadOnlyRepositoryTools, WorkspaceLimits, WorkspaceScope
 
 __all__ = [
     "AgentRunner",
@@ -45,15 +49,21 @@ __all__ = [
     "ProviderError",
     "ProviderInfo",
     "RevisionConflict",
+    "ReadOnlyRepositoryTools",
     "RunState",
     "SqliteEventStore",
     "RunProjection",
     "RunResult",
     "ToolCall",
+    "ToolError",
+    "ToolOutput",
     "ToolRegistry",
     "ToolResult",
     "ToolRuntime",
+    "ToolSpec",
     "TokenUsage",
+    "WorkspaceLimits",
+    "WorkspaceScope",
     "project_run",
     "project_state",
 ]

@@ -209,14 +209,19 @@ class AgentRunner:
                     return finish("budget_exhausted", f"maximum tool calls exceeded: {self.max_tool_calls}")
                 result = self.tools.run(run_id, call)
                 revision = project_state(self.event_store.load(run_id)).revision
+                tool_content = result.value if result.ok else {
+                    "error": result.error,
+                    "error_code": result.error_code,
+                    "retryable": result.retryable,
+                    "denied": result.denied,
+                }
                 observation = json.dumps({
-                    "tool": call.name, "arguments": call.arguments,
-                    "result": result.value if result.ok else {"error": result.error, "denied": result.denied},
+                    "tool": call.name, "arguments": call.arguments, "result": tool_content,
                 }, ensure_ascii=False, sort_keys=True, separators=(",", ":"))
                 emit("run.observed", {"fingerprint": hashlib.sha256(observation.encode("utf-8")).hexdigest()})
                 messages.append({
                     "role": "tool", "call_id": call.id, "name": call.name,
-                    "content": result.value if result.ok else {"error": result.error, "denied": result.denied},
+                    "content": tool_content,
                 })
 
     @staticmethod
