@@ -22,6 +22,28 @@ class LearningExamplesTests(unittest.TestCase):
             exec(compile(executable[0], "learning:minimal_loop", "exec"), {})
         self.assertIn("观察到：def total", output.getvalue())
 
+    def test_documented_contract_examples_run(self):
+        text = (ROOT / "学习文档.md").read_text(encoding="utf-8")
+        blocks = re.findall(r"```python\n(.*?)\n```", text, re.DOTALL)
+        examples = [
+            block for block in blocks
+            if block.startswith("# runnable: ")
+            and not block.startswith("# runnable: minimal_loop\n")
+        ]
+        expected = {
+            "call_pairing": "配对检查通过",
+            "optimistic_edit": "冲突未覆盖，正常替换成功",
+            "evidence_verdict": "通过、过期和未运行已区分",
+        }
+        names = [block.splitlines()[0].removeprefix("# runnable: ") for block in examples]
+        self.assertEqual(sorted(names), sorted(expected))
+        for name, block in zip(names, examples):
+            with self.subTest(example=name):
+                output = io.StringIO()
+                with contextlib.redirect_stdout(output):
+                    exec(compile(block, f"learning:{name}", "exec"), {})
+                self.assertIn(expected[name], output.getvalue())
+
     def test_documented_schema_can_be_created(self):
         text = (ROOT / "设计说明.md").read_text(encoding="utf-8")
         blocks = re.findall(r"```sql\n(.*?)\n```", text, re.DOTALL)
@@ -35,6 +57,19 @@ class LearningExamplesTests(unittest.TestCase):
                 connection.execute("INSERT INTO runs VALUES ('r2','s','running','{}','{}','{}')")
             connection.execute("UPDATE runs SET status='interrupted' WHERE id='r1'")
             connection.execute("INSERT INTO runs VALUES ('r2','s','running','{}','{}','{}')")
+            with self.assertRaises(sqlite3.IntegrityError):
+                connection.execute("UPDATE runs SET status='invented' WHERE id='r2'")
+            connection.execute(
+                "INSERT INTO calls VALUES ('r2','c1','fs.read','{}','pending',NULL)"
+            )
+            with self.assertRaises(sqlite3.IntegrityError):
+                connection.execute(
+                    "INSERT INTO calls VALUES ('r2','c1','fs.read','{}','pending',NULL)"
+                )
+            with self.assertRaises(sqlite3.IntegrityError):
+                connection.execute(
+                    "UPDATE calls SET status='invented' WHERE call_id='c1'"
+                )
 
     def test_seven_laboratory_scenarios(self):
         path = ROOT / "代码" / "sonic" / "examples" / "mini_sonic.py"
